@@ -1,22 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export const LoadingScreen = ({ onComplete }) => {
   const [text, setText] = useState("");
-  const fullText = "<Hello  />";
+  const fullText = "<Hello World/>";
+  const indexRef = useRef(0);
 
   useEffect(() => {
-    let index = 0;
     const interval = setInterval(() => {
-      setText(fullText.substring(0, index));
-      index++;
-
-      if (index > fullText.length) {
-        clearInterval(interval);
-
-        setTimeout(() => {
-          onComplete();
-        }, 1000);
-      }
+      setText((prev) => {
+        if (prev === fullText) {
+          clearInterval(interval);
+          setTimeout(onComplete, 1000);
+          return prev;
+        }
+        indexRef.current++;
+        return fullText.substring(0, indexRef.current);
+      });
     }, 100);
 
     return () => clearInterval(interval);
