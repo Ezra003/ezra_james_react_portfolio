@@ -1,53 +1,56 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { RevealOnScroll } from "../RevealOnScroll";
 import emailjs from "emailjs-com";
 
 export const Contact = () => {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
+  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const formRef = useRef(null);
 
   // Validate email format
   const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
 
-    // Extract environment variables
     const serviceId = import.meta.env.VITE_SERVICE_ID;
     const templateId = import.meta.env.VITE_TEMPLATE_ID;
     const publicKey = import.meta.env.VITE_PUBLIC_KEY;
 
     if (!serviceId || !templateId || !publicKey) {
-      console.error("Missing EmailJS environment variables");
-      alert("Email service is not configured properly.");
+      setError("Email service is not configured properly.");
       return;
     }
 
     // Form validation
-    if (!validateEmail(formData.email)) {
-      alert("Please enter a valid email address.");
+    if (!formData.name.trim()) {
+      setError("Name is required.");
       return;
     }
-
+    if (!validateEmail(formData.email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     if (formData.message.length < 10) {
-      alert("Message must be at least 10 characters long.");
+      setError("Message must be at least 10 characters long.");
       return;
     }
 
     setLoading(true);
 
-    emailjs
-      .sendForm(serviceId, templateId, e.target, publicKey)
-      .then(() => {
-        alert("Message Sent!");
-        setFormData({ name: "", email: "", message: "" });
-      })
-      .catch(() => alert("Oops! Something went wrong. Please try again."))
-      .finally(() => setLoading(false));
+    try {
+      await emailjs.sendForm(serviceId, templateId, formRef.current, publicKey);
+      setSuccess("Message sent successfully!");
+      setFormData({ name: "", email: "", message: "" });
+    } catch (error) {
+      setError("Oops! Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,8 +60,14 @@ export const Contact = () => {
           <h2 className="text-3xl font-bold mb-8 bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent text-center">
             Get In Touch
           </h2>
-          <form className="space-y-6" onSubmit={handleSubmit}>
+
+          {/* Display error or success message */}
+          {error && <p className="text-red-500 text-center">{error}</p>}
+          {success && <p className="text-green-500 text-center">{success}</p>}
+
+          <form ref={formRef} className="space-y-6" onSubmit={handleSubmit}>
             <div className="relative">
+              <label htmlFor="name" className="text-white">Name</label>
               <input
                 type="text"
                 id="name"
@@ -66,12 +75,13 @@ export const Contact = () => {
                 required
                 value={formData.name}
                 className="w-full bg-white/5 border border-white/10 rounded px-4 py-3 text-white transition focus:outline-none focus:border-blue-500 focus:bg-blue-500/5"
-                placeholder="Name..."
+                placeholder="Your Name"
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
 
             <div className="relative">
+              <label htmlFor="email" className="text-white">Email</label>
               <input
                 type="email"
                 id="email"
@@ -85,6 +95,7 @@ export const Contact = () => {
             </div>
 
             <div className="relative">
+              <label htmlFor="message" className="text-white">Message</label>
               <textarea
                 id="message"
                 name="message"
